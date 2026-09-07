@@ -3,10 +3,10 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from vehicles.models import Vehicle
-from .models import ParkingSlot
-from .serializers import ParkingSlotSerializer
+from .models import ParkingSlot, Amenity, AmenityBooking
+from .serializers import ParkingSlotSerializer, AmenitySerializer, AmenityBookingSerializer
 from .permissions import IsAdminOrReadOnly
-from .services import allocate_slot_for_vehicle, NoAvailableSlotError
+from .services import allocate_slot_for_vehicle, NoAvailableSlotError, create_amenity_booking, SlotAlreadyBookedError
 
 
 class ParkingSlotViewSet(viewsets.ReadOnlyModelViewSet):
@@ -27,3 +27,35 @@ class ParkingSlotViewSet(viewsets.ReadOnlyModelViewSet):
         except NoAvailableSlotError as e:
             return Response({"detail": str(e)}, status=409)
         return Response(ParkingSlotSerializer(slot).data, status=200)
+
+
+class AmenityViewSet(viewsets.ReadOnlyModelViewSet):
+    """Just the list of available amenities — clubhouse, gym, pool, etc."""
+    queryset = Amenity.objects.all()
+    serializer_class = AmenitySerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+
+class AmenityBookingViewSet(viewsets.ModelViewSet):
+    serializer_class = AmenityBookingSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.role == "admin":
+            return AmenityBooking.objects.all()
+        return AmenityBooking.objects.filter(resident=user)
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            booking = create_amenity_booking(
+                amenity_id=serializer.validated_data["amenity"].id,
+                resident=request.user,
+                date=serializer.validated_data["date"],
+                slot=serializer.validated_data["slot"],
+            )
+        except SlotAlreadyBookedError as e:
+            return Response({"detail": str(e)}, status=409)
+        return Response(AmenityBookingSerializer(booking).data, status=201)

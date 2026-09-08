@@ -1,43 +1,62 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { PageHeader, Card, StatusBadge } from "../../components/UI";
-import { amenities, amenityBookings as initial } from "../../data/mockData";
-import { useAuth } from "../../context/useAuth";
+import { api } from "../../api/client";
 import { Plus, CalendarClock } from "lucide-react";
 
 export default function Amenities() {
-  const { currentUser } = useAuth();
-  const [bookings, setBookings] = useState(initial);
+  const [amenities, setAmenities] = useState([]);
+  const [bookings, setBookings] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [showForm, setShowForm] = useState(false);
-  const [amenityId, setAmenityId] = useState(amenities[0].id);
+  const [amenityId, setAmenityId] = useState("");
   const [date, setDate] = useState("");
   const [slot, setSlot] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
-  const myBookings = bookings.filter((b) => b.flat === currentUser?.flat);
+  useEffect(() => {
+    load();
+  }, []);
 
-  function submit(e) {
-    e.preventDefault();
-    if (!date.trim() || !slot.trim()) return;
-    const conflict = bookings.some(
-      (b) => b.amenityId === amenityId && b.date === date && b.slot === slot
-    );
-    if (conflict) {
-      alert("That slot is already booked — pick a different time.");
-      return;
+  async function load() {
+    setLoading(true);
+    try {
+      const [amenitiesData, bookingsData] = await Promise.all([
+        api.get("/parking/amenities/"),
+        api.get("/parking/amenity-bookings/"),
+      ]);
+      setAmenities(amenitiesData.results);
+      setBookings(bookingsData.results);
+      if (amenitiesData.results.length > 0 && !amenityId) {
+        setAmenityId(amenitiesData.results[0].id);
+      }
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
     }
-    setBookings((prev) => [
-      {
-        id: `BK-${Math.floor(Math.random() * 90 + 10)}`,
-        amenityId,
-        flat: currentUser.flat,
-        date,
-        slot,
-        status: "confirmed",
-      },
-      ...prev,
-    ]);
-    setDate("");
-    setSlot("");
-    setShowForm(false);
+  }
+
+  async function submit(e) {
+    e.preventDefault();
+    if (!date.trim() || !slot.trim() || !amenityId) return;
+    setSubmitting(true);
+    setError("");
+    try {
+      await api.post("/parking/amenity-bookings/", { amenity: amenityId, date, slot });
+      setDate("");
+      setSlot("");
+      setShowForm(false);
+      await load();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  if (loading) {
+    return <div className="text-sm text-slate p-8 text-center">Loading…</div>;
   }
 
   return (
@@ -77,9 +96,9 @@ export default function Amenities() {
                 Date
               </label>
               <input
+                type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                placeholder="e.g. 24 Aug 2026"
                 className="w-full border border-line rounded-lg px-3 py-2 text-sm focus-visible:outline-amber"
               />
             </div>
@@ -90,15 +109,17 @@ export default function Amenities() {
               <input
                 value={slot}
                 onChange={(e) => setSlot(e.target.value)}
-                placeholder="e.g. 6:00 PM – 8:00 PM"
+                placeholder="e.g. 6:00 PM - 8:00 PM"
                 className="w-full border border-line rounded-lg px-3 py-2 text-sm focus-visible:outline-amber"
               />
             </div>
+            {error && <p className="col-span-3 text-xs text-rust">{error}</p>}
             <button
               type="submit"
-              className="col-span-3 bg-amber text-ink text-sm font-medium px-4 py-2 rounded-lg hover:bg-amber/90 transition-colors"
+              disabled={submitting}
+              className="col-span-3 bg-amber text-ink text-sm font-medium px-4 py-2 rounded-lg hover:bg-amber/90 transition-colors disabled:opacity-60"
             >
-              Confirm booking
+              {submitting ? "Booking…" : "Confirm booking"}
             </button>
           </form>
         </Card>
@@ -108,7 +129,7 @@ export default function Amenities() {
         {amenities.map((a) => (
           <Card key={a.id} className="p-4">
             <div className="font-display font-semibold text-sm mb-1">{a.name}</div>
-            <div className="text-xs text-slate">{a.capacity} · {a.slotLength} slots</div>
+            <div className="text-xs text-slate">{a.capacity} · {a.slot_length} slots</div>
           </Card>
         ))}
       </div>
@@ -127,11 +148,11 @@ export default function Amenities() {
             </tr>
           </thead>
           <tbody>
-            {myBookings.map((b) => (
+            {bookings.map((b) => (
               <tr key={b.id} className="border-b border-line last:border-0">
                 <td className="px-5 py-3 flex items-center gap-2">
                   <CalendarClock size={14} className="text-slate" />
-                  {amenities.find((a) => a.id === b.amenityId)?.name}
+                  {b.amenity_name}
                 </td>
                 <td className="px-5 py-3 font-mono text-xs">{b.date}</td>
                 <td className="px-5 py-3 font-mono text-xs">{b.slot}</td>
@@ -140,7 +161,7 @@ export default function Amenities() {
                 </td>
               </tr>
             ))}
-            {myBookings.length === 0 && (
+            {bookings.length === 0 && (
               <tr>
                 <td colSpan={4} className="px-5 py-8 text-center text-slate text-sm">
                   No bookings yet.

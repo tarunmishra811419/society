@@ -49,3 +49,17 @@ def generate_staff_qr_code():
     tell at a glance whether a pass is a one-time guest QR or a recurring
     staff QR without needing to look it up."""
     return f"SQR-{secrets.token_hex(4).upper()}"
+
+def generate_qr_image_data_url(code: str) -> str:
+    """Renders the given code as an actual scannable QR image, returned as
+    a base64 data URL — the frontend can drop this straight into an <img
+    src="..."> with no separate file download or media storage needed."""
+    import qrcode
+    import io
+    import base64
+
+    img = qrcode.make(code)
+    buffer = io.BytesIO()
+    img.save(buffer, format="PNG")
+    encoded = base64.b64encode(buffer.getvalue()).decode("ascii")
+    return f"data:image/png;base64,{encoded}"

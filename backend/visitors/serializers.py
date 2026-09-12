@@ -4,11 +4,16 @@ from .models import Visitor, GuestApproval, Package, StaffPass
 
 class VisitorSerializer(serializers.ModelSerializer):
     host_flat = serializers.CharField(source="host.resident_profile.flat_number", read_only=True, default=None)
+    qr_image = serializers.SerializerMethodField()
 
     class Meta:
         model = Visitor
-        fields = ["id", "name", "purpose", "host_flat", "qr_code", "status", "checked_in_at", "created_at"]
+        fields = ["id", "name", "purpose", "host_flat", "qr_code", "qr_image", "status", "checked_in_at", "created_at"]
         read_only_fields = ["qr_code", "status", "checked_in_at", "created_at"]
+
+    def get_qr_image(self, obj):
+        from .services import generate_qr_image_data_url
+        return generate_qr_image_data_url(obj.qr_code)
 
 
 class GuestApprovalSerializer(serializers.ModelSerializer):
@@ -25,19 +30,26 @@ class GuestApprovalSerializer(serializers.ModelSerializer):
 class CheckInSerializer(serializers.Serializer):
     qr_code = serializers.CharField(max_length=50)
 
+
 class PackageSerializer(serializers.ModelSerializer):
     class Meta:
         model = Package
         fields = ["id", "courier", "flat_number", "status", "has_photo", "logged_at"]
         read_only_fields = ["status", "has_photo", "logged_at"]
 
+
 class StaffPassSerializer(serializers.ModelSerializer):
     status = serializers.SerializerMethodField()
+    qr_image = serializers.SerializerMethodField()
 
     class Meta:
         model = StaffPass
-        fields = ["id", "name", "role", "valid_till", "qr_code", "status", "created_at"]
+        fields = ["id", "name", "role", "valid_till", "qr_code", "qr_image", "status", "created_at"]
         read_only_fields = ["qr_code", "created_at"]
+
+    def get_qr_image(self, obj):
+        from .services import generate_qr_image_data_url
+        return generate_qr_image_data_url(obj.qr_code)
 
     def get_status(self, obj):
         from django.utils import timezone

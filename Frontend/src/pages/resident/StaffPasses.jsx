@@ -143,7 +143,10 @@ export default function StaffPasses() {
                   </div>
                 </div>
               </div>
-              <StatusBadge status={s.status === "active" ? "active" : s.status === "expiring" ? "pending" : "overdue"} />
+              <div className="flex items-center gap-3">
+                <img src={s.qr_image} alt={`QR code for ${s.name}`} className="w-12 h-12 rounded border border-line" />
+                <StatusBadge status={s.status === "active" ? "active" : s.status === "expiring" ? "pending" : "overdue"} />
+              </div>
             </Card>
           ))}
           {list.length === 0 && (

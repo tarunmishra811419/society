@@ -108,7 +108,10 @@ export default function VisitorCheckIn() {
             <tbody>
               {visitors.map((v) => (
                 <tr key={v.id} className="border-b border-line last:border-0">
-                  <td className="px-5 py-3 font-mono">{v.qr_code}</td>
+                  <td className="px-5 py-3 flex items-center gap-2 font-mono">
+                    <img src={v.qr_image} alt="QR" className="w-8 h-8 rounded border border-line" />
+                    {v.qr_code}
+                  </td>
                   <td className="px-5 py-3">{v.name}</td>
                   <td className="px-5 py-3 font-mono">{v.host_flat}</td>
                   <td className="px-5 py-3">

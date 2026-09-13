@@ -9,6 +9,7 @@ import {
   Home, Car, Users, Wallet, MessageSquareWarning, Megaphone,
   ShieldCheck, ScanLine, Grid3x3, BarChart3, FileClock,
   Package, UserCheck, CalendarClock, AlertOctagon, LogOut as MoveOutIcon,
+  Landmark,
 } from "lucide-react";
 
 import ResidentDashboard from "./pages/resident/Dashboard";
@@ -31,6 +32,7 @@ import Reports from "./pages/admin/Reports";
 import AuditLogs from "./pages/admin/AuditLogs";
 import Defaulters from "./pages/admin/Defaulters";
 import MoveInOut from "./pages/admin/MoveInOut";
+import SocietyAccounting from "./pages/admin/SocietyAccounting";
 
 const residentNav = [
   { to: "/resident", label: "Dashboard", icon: Home, end: true },
@@ -54,6 +56,7 @@ const adminNav = [
   { to: "/admin/slots", label: "Parking slots", icon: Grid3x3 },
   { to: "/admin/announcements", label: "Announcements", icon: Megaphone },
   { to: "/admin/defaulters", label: "Defaulters", icon: AlertOctagon },
+  { to: "/admin/accounting", label: "Accounting & Ledger", icon: Landmark },
   { to: "/admin/move", label: "Move in/out", icon: MoveOutIcon },
   { to: "/admin/reports", label: "Reports", icon: BarChart3 },
   { to: "/admin/audit", label: "Audit logs", icon: FileClock },
@@ -98,6 +101,7 @@ function AppRoutes() {
       <Route path="/admin/slots" element={<Protected role="admin"><DashboardLayout title="Admin" navItems={adminNav}><ParkingSlots /></DashboardLayout></Protected>} />
       <Route path="/admin/announcements" element={<Protected role="admin"><DashboardLayout title="Admin" navItems={adminNav}><Announcements /></DashboardLayout></Protected>} />
       <Route path="/admin/defaulters" element={<Protected role="admin"><DashboardLayout title="Admin" navItems={adminNav}><Defaulters /></DashboardLayout></Protected>} />
+      <Route path="/admin/accounting" element={<Protected role="admin"><DashboardLayout title="Admin" navItems={adminNav}><SocietyAccounting /></DashboardLayout></Protected>} />
       <Route path="/admin/move" element={<Protected role="admin"><DashboardLayout title="Admin" navItems={adminNav}><MoveInOut /></DashboardLayout></Protected>} />
       <Route path="/admin/reports" element={<Protected role="admin"><DashboardLayout title="Admin" navItems={adminNav}><Reports /></DashboardLayout></Protected>} />
       <Route path="/admin/audit" element={<Protected role="admin"><DashboardLayout title="Admin" navItems={adminNav}><AuditLogs /></DashboardLayout></Protected>} />

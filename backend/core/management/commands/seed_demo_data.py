@@ -8,7 +8,7 @@ from accounts.models import User, ResidentProfile, SecurityProfile
 from parking.models import ParkingSlot
 from vehicles.models import Vehicle
 from visitors.models import Visitor, GuestApproval
-from billing.models import MaintenanceFee
+from billing.models import MaintenanceFee, SocietyTransaction
 from complaints.models import Complaint
 from announcements.models import Announcement
 
@@ -56,6 +56,9 @@ class Command(BaseCommand):
         self.stdout.write("Creating announcements...")
         self._create_announcements(admin)
 
+        self.stdout.write("Creating society accounting transactions...")
+        self._create_accounting_data(admin)
+
         self.stdout.write(self.style.SUCCESS("Demo data seeded successfully."))
 
     # ---------- helpers ----------
@@ -67,6 +70,7 @@ class Command(BaseCommand):
         User.objects.filter(username__in=demo_usernames).delete()
         ParkingSlot.objects.all().delete()
         Announcement.objects.all().delete()
+        SocietyTransaction.objects.all().delete()
 
     def _create_parking_slots(self):
         layout = [
@@ -207,19 +211,46 @@ class Command(BaseCommand):
         arjun = residents["arjun_mehta"]
         priya = residents["priya_nair"]
 
+        breakdown_sample = {
+            "Base Maintenance": 2400.0,
+            "Water & Sanitation": 320.0,
+            "Sinking Fund": 256.0,
+            "Common Area Electricity": 224.0,
+        }
+
         fee_data = [
-            (ritika, "August 2026", 3200, MaintenanceFee.Status.PAID),
-            (ritika, "September 2026", 3200, MaintenanceFee.Status.DUE),
-            (arjun, "September 2026", 3200, MaintenanceFee.Status.DUE),
-            (arjun, "August 2026", 3200, MaintenanceFee.Status.OVERDUE),
-            (priya, "July 2026", 3200, MaintenanceFee.Status.OVERDUE),
+            (ritika, "August 2026", 3200, MaintenanceFee.Status.PAID, "REC-2026-0001", "upi", "order_test_aug_ritika"),
+            (ritika, "September 2026", 3200, MaintenanceFee.Status.DUE, None, None, ""),
+            (arjun, "September 2026", 3200, MaintenanceFee.Status.DUE, None, None, ""),
+            (arjun, "August 2026", 3200, MaintenanceFee.Status.OVERDUE, None, None, ""),
+            (priya, "July 2026", 3200, MaintenanceFee.Status.OVERDUE, None, None, ""),
         ]
-        for resident, period, amount, status in fee_data:
-            MaintenanceFee.objects.get_or_create(
+        for resident, period, amount, status, rec_num, method, ref in fee_data:
+            fee, created = MaintenanceFee.objects.get_or_create(
                 resident=resident,
                 period=period,
-                defaults={"amount": Decimal(amount), "status": status},
+                defaults={
+                    "amount": Decimal(amount),
+                    "status": status,
+                    "receipt_number": rec_num,
+                    "payment_method": method or "",
+                    "payment_reference": ref,
+                    "breakdown_json": breakdown_sample,
+                },
             )
+            if fee.status == MaintenanceFee.Status.PAID:
+                SocietyTransaction.objects.get_or_create(
+                    reference_no=ref or f"ref_{period}",
+                    defaults={
+                        "entry_type": SocietyTransaction.EntryType.INCOME,
+                        "category": SocietyTransaction.Category.MAINTENANCE,
+                        "title": f"Maintenance Collection - {resident.get_full_name()} (Flat {resident.resident_profile.flat_number})",
+                        "amount": Decimal(amount),
+                        "date": "2026-08-05",
+                        "description": f"August maintenance collection via {method.upper()}",
+                        "recorded_by": resident,
+                    },
+                )
 
     def _create_complaints(self, residents):
         ritika = residents["ritika_sharma"]
@@ -243,4 +274,85 @@ class Command(BaseCommand):
         for title, body, priority in announcement_data:
             Announcement.objects.get_or_create(
                 title=title, defaults={"body": body, "priority": priority, "posted_by": admin},
+            )
+
+    def _create_accounting_data(self, admin):
+        transactions = [
+            (
+                SocietyTransaction.EntryType.EXPENSE,
+                SocietyTransaction.Category.SECURITY,
+                "Apex Security Services — August Guard Salaries",
+                Decimal("28000.00"),
+                "2026-08-01",
+                "Four 24/7 gate and patrol security guards monthly payroll",
+                "EXP-2026-0801",
+            ),
+            (
+                SocietyTransaction.EntryType.EXPENSE,
+                SocietyTransaction.Category.UTILITIES,
+                "Common Area Electricity (BESCOM Invoice)",
+                Decimal("14250.00"),
+                "2026-08-08",
+                "Power bill for lifts, corridor lighting, and water pumps",
+                "EXP-2026-0802",
+            ),
+            (
+                SocietyTransaction.EntryType.EXPENSE,
+                SocietyTransaction.Category.REPAIRS,
+                "Otis Elevator AMC Quarterly Service",
+                Decimal("18500.00"),
+                "2026-08-12",
+                "Scheduled quarterly lift servicing and motor inspection",
+                "EXP-2026-0803",
+            ),
+            (
+                SocietyTransaction.EntryType.EXPENSE,
+                SocietyTransaction.Category.HOUSEKEEPING,
+                "CleanZone Housekeeping & Waste Disposal",
+                Decimal("9800.00"),
+                "2026-08-15",
+                "Daily garbage collection, corridor mopping, sanitization",
+                "EXP-2026-0804",
+            ),
+            (
+                SocietyTransaction.EntryType.EXPENSE,
+                SocietyTransaction.Category.GARDENING,
+                "GreenThumb Landscaping & Lawn Maintenance",
+                Decimal("6500.00"),
+                "2026-08-18",
+                "Lawn mowing, seasonal flowering plants, tree trimming",
+                "EXP-2026-0805",
+            ),
+            (
+                SocietyTransaction.EntryType.INCOME,
+                SocietyTransaction.Category.FACILITY,
+                "Clubhouse Party Hall Booking (Flat A-101)",
+                Decimal("5000.00"),
+                "2026-08-20",
+                "Birthday party rental fee and cleaning deposit",
+                "INC-2026-0801",
+            ),
+            (
+                SocietyTransaction.EntryType.EXPENSE,
+                SocietyTransaction.Category.ADMIN,
+                "Society Annual Audit & CA Certification",
+                Decimal("12000.00"),
+                "2026-08-25",
+                "Audit preparation and registrar filing fee",
+                "EXP-2026-0806",
+            ),
+        ]
+
+        for entry_type, category, title, amount, date_str, desc, ref in transactions:
+            SocietyTransaction.objects.get_or_create(
+                reference_no=ref,
+                defaults={
+                    "entry_type": entry_type,
+                    "category": category,
+                    "title": title,
+                    "amount": amount,
+                    "date": date_str,
+                    "description": desc,
+                    "recorded_by": admin,
+                },
             )

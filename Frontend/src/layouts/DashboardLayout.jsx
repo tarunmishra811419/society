@@ -18,7 +18,7 @@ export default function DashboardLayout({ title, navItems, children }) {
       <aside className="w-60 shrink-0 bg-ink text-paper flex flex-col animate-fade-in-up">
         <div className="px-5 py-6 border-b border-white/10">
           <div className="font-mono text-[10px] tracking-widest text-amber uppercase mb-1">
-            Greenfield Residency
+            Residentia
           </div>
           <div className="font-display text-lg font-semibold">{title}</div>
         </div>

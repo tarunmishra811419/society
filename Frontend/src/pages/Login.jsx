@@ -45,7 +45,7 @@ export default function Login() {
               ● Gate Access Terminal
             </div>
             <h1 className="font-display text-4xl font-semibold text-paper mb-3">
-              Greenfield <span className="shimmer-text">Residency</span>
+              <span className="shimmer-text">Residentia</span>
             </h1>
             <p className="text-slate text-base">Sign in to continue.</p>
           </div>

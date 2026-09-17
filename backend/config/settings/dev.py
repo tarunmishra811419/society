@@ -3,7 +3,7 @@ from .base import BASE_DIR
 
 DEBUG = True
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'testserver']
 
 # Vite dev server
 CORS_ALLOWED_ORIGINS = [

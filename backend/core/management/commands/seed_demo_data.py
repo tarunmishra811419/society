@@ -1,5 +1,6 @@
 import secrets
 from decimal import Decimal
+from django.utils import timezone
 
 from django.core.management.base import BaseCommand
 from django.db import transaction
@@ -7,7 +8,7 @@ from django.db import transaction
 from accounts.models import User, ResidentProfile, SecurityProfile
 from parking.models import ParkingSlot
 from vehicles.models import Vehicle
-from visitors.models import Visitor, GuestApproval
+from visitors.models import Visitor, GuestApproval, Package, StaffPass
 from billing.models import MaintenanceFee, SocietyTransaction
 from complaints.models import Complaint
 from announcements.models import Announcement
@@ -59,6 +60,10 @@ class Command(BaseCommand):
         self.stdout.write("Creating society accounting transactions...")
         self._create_accounting_data(admin)
 
+        self.stdout.write("Creating packages and staff passes...")
+        self._create_packages()
+        self._create_staff_passes(residents)
+
         self.stdout.write(self.style.SUCCESS("Demo data seeded successfully."))
 
     # ---------- helpers ----------
@@ -71,6 +76,8 @@ class Command(BaseCommand):
         ParkingSlot.objects.all().delete()
         Announcement.objects.all().delete()
         SocietyTransaction.objects.all().delete()
+        Package.objects.all().delete()
+        StaffPass.objects.all().delete()
 
     def _create_parking_slots(self):
         layout = [
@@ -132,21 +139,18 @@ class Command(BaseCommand):
         return user
 
     def _ensure_admin(self):
-        existing_superuser = User.objects.filter(is_superuser=True).first()
-        if existing_superuser:
-            if existing_superuser.role != User.Role.ADMIN:
-                existing_superuser.role = User.Role.ADMIN
-                existing_superuser.save()
-            return existing_superuser
-
         user, created = User.objects.get_or_create(
             username="demo_admin",
             defaults={"first_name": "Society", "last_name": "Admin", "role": User.Role.ADMIN},
         )
-        if created:
-            user.set_password("demo1234")
-            user.is_staff = True
-            user.save()
+        user.set_password("demo1234")
+        user.is_staff = True
+        user.is_superuser = True
+        user.role = User.Role.ADMIN
+        user.save()
+
+        # Also ensure any existing superuser has admin role
+        User.objects.filter(is_superuser=True).update(role=User.Role.ADMIN)
         return user
 
     def _create_vehicles(self, residents, slots):
@@ -184,24 +188,36 @@ class Command(BaseCommand):
             qr_code="QR-8891",
             defaults={
                 "name": "Deepak Singh",
-                "purpose": "Delivery — Zomato",
+                "phone": "9876501234",
+                "purpose": "Food Delivery (Zomato)",
+                "vehicle_number": "KA04 EF 9981",
                 "host": ritika,
+                "otp": "7105",
                 "status": Visitor.Status.CHECKED_IN,
+                "checked_in_at": timezone.now(),
             },
         )
 
         GuestApproval.objects.get_or_create(
             visitor_name="Anjali Gupta",
             requested_by=arjun,
-            defaults={"purpose": "Family visit", "status": GuestApproval.Status.PENDING},
+            defaults={
+                "phone": "9811234567",
+                "purpose": "Family weekend visit",
+                "vehicle_number": "UP32 GH 4567",
+                "status": GuestApproval.Status.PENDING,
+            },
         )
 
         Visitor.objects.get_or_create(
             qr_code="QR-8893",
             defaults={
                 "name": "Rahul Jain",
-                "purpose": "Guest visit",
+                "phone": "9899011223",
+                "purpose": "Friend visit",
+                "vehicle_number": "DL8C AK 1029",
                 "host": ritika,
+                "otp": "4892",
                 "status": Visitor.Status.APPROVED,
             },
         )
@@ -354,5 +370,50 @@ class Command(BaseCommand):
                     "date": date_str,
                     "description": desc,
                     "recorded_by": admin,
+                },
+            )
+
+    def _create_packages(self):
+        packages = [
+            ("Amazon", "Amazon Logistics", "B-204", "Ramesh Kumar", "9811002233", Package.Status.WAITING, "1024"),
+            ("Swiggy", "Instamart Delivery", "A-101", "Imran Ali", "9876543210", Package.Status.WAITING, "4491"),
+            ("Zomato", "Delivery Partner", "C-305", "Suresh Das", "9988776655", Package.Status.COLLECTED, "8821"),
+            ("Flipkart", "Ekart Logistics", "B-204", "Sunil Yadav", "9822334455", Package.Status.COLLECTED, "9102"),
+        ]
+        for company, courier, flat, agent_name, agent_phone, status, pin in packages:
+            Package.objects.get_or_create(
+                flat_number=flat,
+                courier=courier,
+                defaults={
+                    "company": company,
+                    "delivery_person_name": agent_name,
+                    "delivery_person_phone": agent_phone,
+                    "status": status,
+                    "tracking_pin": pin,
+                    "has_photo": True,
+                },
+            )
+
+    def _create_staff_passes(self, residents):
+        from datetime import timedelta
+        ritika = residents["ritika_sharma"]
+        arjun = residents["arjun_mehta"]
+        priya = residents["priya_nair"]
+
+        passes = [
+            (ritika, "Shanti Devi", "9811122334", StaffPass.Role.MAID, "SQR-881A", 180),
+            (ritika, "Ramesh Chandra", "9822233445", StaffPass.Role.COOK, "SQR-882B", 90),
+            (arjun, "Manoj Sharma", "9833344556", StaffPass.Role.DRIVER, "SQR-883C", 120),
+            (priya, "Sunita Kumari", "9844455667", StaffPass.Role.NANNY, "SQR-884D", 15),
+        ]
+        for owner, name, phone, role, qr, days in passes:
+            StaffPass.objects.get_or_create(
+                qr_code=qr,
+                defaults={
+                    "owner": owner,
+                    "name": name,
+                    "phone": phone,
+                    "role": role,
+                    "valid_till": timezone.now().date() + timedelta(days=days),
                 },
             )

@@ -72,7 +72,7 @@ class Command(BaseCommand):
         demo_usernames = [
             "ritika_sharma", "arjun_mehta", "priya_nair", "naveen_kumar", "demo_admin",
         ]
-        User.objects.filter(username__in=demo_usernames).delete()
+        User.objects.filter(username__in=demo_usernames).exclude(username="Tarunhead").delete()
         ParkingSlot.objects.all().delete()
         Announcement.objects.all().delete()
         SocietyTransaction.objects.all().delete()

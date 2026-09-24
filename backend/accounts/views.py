@@ -5,8 +5,22 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
 
 from .models import User, MoveRequest, MoveRequestChecklistItem
-from .serializers import UserSerializer, RegisterResidentSerializer, MoveRequestSerializer
+from .serializers import UserSerializer, RegisterResidentSerializer, MoveRequestSerializer, ResidentDetailSerializer
 from .permissions import IsAdminRole
+
+
+class ResidentViewSet(viewsets.ReadOnlyModelViewSet):
+    """Admin-only endpoint to view full details of all residents."""
+    serializer_class = ResidentDetailSerializer
+    permission_classes = [permissions.IsAuthenticated, IsAdminRole]
+
+    def get_queryset(self):
+        return User.objects.filter(role=User.Role.RESIDENT).select_related(
+            "resident_profile"
+        ).prefetch_related(
+            "vehicles", "vehicles__slot", "maintenance_fees", "staff_passes"
+        ).order_by("resident_profile__flat_number")
+
 
 
 class MeView(APIView):

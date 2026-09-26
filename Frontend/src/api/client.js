@@ -14,10 +14,27 @@ function setTokens({ access, refresh }) {
   if (access) localStorage.setItem("access_token", access);
   if (refresh) localStorage.setItem("refresh_token", refresh);
 }
+function getUser() {
+  try {
+    const raw = localStorage.getItem("user");
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+function setUser(user) {
+  if (user) {
+    localStorage.setItem("user", JSON.stringify(user));
+  } else {
+    localStorage.removeItem("user");
+  }
+}
 function clearTokens() {
   localStorage.removeItem("access_token");
   localStorage.removeItem("refresh_token");
+  localStorage.removeItem("user");
 }
+
 
 async function refreshAccessToken() {
   const refresh = getRefreshToken();
@@ -93,4 +110,4 @@ export function logout() {
   clearTokens();
 }
 
-export { getAccessToken };
+export { getAccessToken, getUser, setUser, clearTokens };

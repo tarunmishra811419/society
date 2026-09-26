@@ -1,15 +1,22 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/useAuth";
 import { ArrowRight, Loader2 } from "lucide-react";
 
 export default function Login() {
-  const { login } = useAuth();
+  const { login, currentUser } = useAuth();
   const navigate = useNavigate();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (currentUser?.role) {
+      navigate(`/${currentUser.role}`, { replace: true });
+    }
+  }, [currentUser, navigate]);
+
 
   async function handleSubmit(e) {
     e.preventDefault();

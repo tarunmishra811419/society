@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/useAuth";
 import { ArrowRight, Loader2 } from "lucide-react";
@@ -10,13 +10,6 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
-
-  useEffect(() => {
-    if (currentUser?.role) {
-      navigate(`/${currentUser.role}`, { replace: true });
-    }
-  }, [currentUser, navigate]);
-
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -56,6 +49,23 @@ export default function Login() {
             </h1>
             <p className="text-slate text-base">Sign in to continue.</p>
           </div>
+
+          {currentUser && (
+            <div className="mb-4 p-3 bg-amber/10 border border-amber/30 rounded-xl flex items-center justify-between text-xs text-paper animate-fade-in-up">
+              <div>
+                <span className="text-slate">Active session:</span>{" "}
+                <strong className="text-amber">{currentUser.username}</strong>{" "}
+                <span className="text-[10px] uppercase font-mono text-slate">({currentUser.role})</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => navigate(`/${currentUser.role}`)}
+                className="text-amber font-semibold hover:underline flex items-center gap-1 shrink-0 ml-2"
+              >
+                Go to Portal <ArrowRight size={13} />
+              </button>
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="glass-panel border border-white/10 rounded-2xl p-6 space-y-4">
             <div>
